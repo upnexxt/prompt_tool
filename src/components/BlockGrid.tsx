@@ -13,6 +13,9 @@ import {
   Typography,
   Divider,
   Collapse,
+  FormControlLabel,
+  Checkbox,
+  FormGroup,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import CategoryIcon from "@mui/icons-material/Category";
@@ -22,6 +25,9 @@ import BlockCard from "./BlockCard";
 import AddBlockModal from "./AddBlockModal";
 import CategoryManager from "./CategoryManager";
 import { supabase } from "../config/supabase";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import ClearIcon from "@mui/icons-material/Clear";
 
 interface Block {
   id: string;
@@ -39,10 +45,13 @@ interface Category {
 export default function BlockGrid() {
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<
+    Record<string, boolean>
+  >({});
+  const [categoryPreviews, setCategoryPreviews] = useState<
     Record<string, boolean>
   >({});
 
@@ -55,6 +64,22 @@ export default function BlockGrid() {
     initialExpanded["Geen Categorie"] = true;
     setExpandedCategories(initialExpanded);
   }, [categories.length]);
+
+  // Bij eerste render, alle previews aanzetten
+  useEffect(() => {
+    const initialPreviews: Record<string, boolean> = {};
+    categories.forEach((category) => {
+      initialPreviews[category.name] = true;
+    });
+    initialPreviews["Geen Categorie"] = true;
+    setCategoryPreviews(initialPreviews);
+  }, [categories.length]);
+
+  // Bij eerste render, alle categorieën selecteren
+  useEffect(() => {
+    const allCategoryIds = categories.map((cat) => cat.id);
+    setSelectedCategories(allCategoryIds);
+  }, [categories]);
 
   const toggleCategory = (categoryName: string) => {
     setExpandedCategories((prev) => ({
@@ -103,10 +128,26 @@ export default function BlockGrid() {
     fetchData();
   }, []);
 
-  const filteredBlocks =
-    selectedCategory === "all"
-      ? blocks
-      : blocks.filter((block) => block.category_id === selectedCategory);
+  const handleCategoryToggle = (categoryId: string) => {
+    setSelectedCategories((prev) => {
+      if (prev.includes(categoryId)) {
+        return prev.filter((id) => id !== categoryId);
+      } else {
+        return [...prev, categoryId];
+      }
+    });
+  };
+
+  const handleSelectAll = () => {
+    const allCategoryIds = categories.map((cat) => cat.id);
+    setSelectedCategories(allCategoryIds);
+  };
+
+  const filteredBlocks = blocks.filter(
+    (block) =>
+      selectedCategories.length === 0 ||
+      selectedCategories.includes(block.category_id)
+  );
 
   const sortedBlocks = [...filteredBlocks].sort((a, b) => {
     const categoryA = categories.find((c) => c.id === a.category_id);
@@ -135,6 +176,25 @@ export default function BlockGrid() {
     return groups;
   }, {} as Record<string, typeof blocks>);
 
+  const toggleCategoryPreview = (categoryName: string) => {
+    setCategoryPreviews((prev) => ({
+      ...prev,
+      [categoryName]: !prev[categoryName],
+    }));
+  };
+
+  const handleToggleAllPreviews = () => {
+    const allCategories = [...categories.map((c) => c.name), "Geen Categorie"];
+    const areAllVisible = allCategories.every((cat) => categoryPreviews[cat]);
+
+    const newPreviews = { ...categoryPreviews };
+    allCategories.forEach((cat) => {
+      newPreviews[cat] = !areAllVisible;
+    });
+
+    setCategoryPreviews(newPreviews);
+  };
+
   return (
     <Container maxWidth="xl">
       <Box sx={{ my: 2 }}>
@@ -148,20 +208,50 @@ export default function BlockGrid() {
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>Categorie</InputLabel>
+              <InputLabel>Categorieën</InputLabel>
               <Select
-                value={selectedCategory}
-                label="Categorie"
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                multiple
+                value={selectedCategories}
+                label="Categorieën"
+                onChange={(e) =>
+                  setSelectedCategories(e.target.value as string[])
+                }
+                renderValue={(selected) => {
+                  return selected
+                    .map(
+                      (id) =>
+                        categories.find((cat) => cat.id === id)?.name || ""
+                    )
+                    .filter(Boolean)
+                    .join(", ");
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 300,
+                    },
+                  },
+                }}
               >
-                <MenuItem value="all">Alle</MenuItem>
                 {categories.map((category) => (
                   <MenuItem key={category.id} value={category.id}>
-                    {category.name}
+                    <Checkbox
+                      checked={selectedCategories.includes(category.id)}
+                    />
+                    <Typography>{category.name}</Typography>
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
+
+            <Button
+              size="small"
+              onClick={handleSelectAll}
+              variant="outlined"
+              sx={{ height: 40 }}
+            >
+              Alles
+            </Button>
 
             <Tooltip title="Categorieën Beheren">
               <IconButton
@@ -181,6 +271,21 @@ export default function BlockGrid() {
               <Tooltip title="Alles Inklappen">
                 <IconButton size="small" onClick={handleCollapseAll}>
                   <ExpandLessIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip
+                title={
+                  Object.values(categoryPreviews).every((v) => v)
+                    ? "Verberg alle previews"
+                    : "Toon alle previews"
+                }
+              >
+                <IconButton size="small" onClick={handleToggleAllPreviews}>
+                  {Object.values(categoryPreviews).every((v) => v) ? (
+                    <VisibilityOffIcon fontSize="small" />
+                  ) : (
+                    <VisibilityIcon fontSize="small" />
+                  )}
                 </IconButton>
               </Tooltip>
             </Box>
@@ -211,7 +316,6 @@ export default function BlockGrid() {
                       },
                     },
                   }}
-                  onClick={() => toggleCategory(categoryName)}
                 >
                   <IconButton
                     size="small"
@@ -221,6 +325,7 @@ export default function BlockGrid() {
                       opacity: 0.5,
                       transition: "opacity 0.2s",
                     }}
+                    onClick={() => toggleCategory(categoryName)}
                   >
                     {expandedCategories[categoryName] ? (
                       <ExpandLessIcon />
@@ -234,11 +339,34 @@ export default function BlockGrid() {
                     sx={{
                       mr: 2,
                       fontSize: "1.1rem",
+                      flex: 1,
                     }}
+                    onClick={() => toggleCategory(categoryName)}
                   >
                     {categoryName}
                   </Typography>
-                  <Divider sx={{ flex: 1 }} />
+                  <Tooltip
+                    title={
+                      categoryPreviews[categoryName]
+                        ? "Verberg previews"
+                        : "Toon previews"
+                    }
+                    sx={{ opacity: 0.5, "&:hover": { opacity: 1 } }}
+                  >
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleCategoryPreview(categoryName);
+                      }}
+                    >
+                      {categoryPreviews[categoryName] ? (
+                        <VisibilityOffIcon fontSize="small" />
+                      ) : (
+                        <VisibilityIcon fontSize="small" />
+                      )}
+                    </IconButton>
+                  </Tooltip>
                 </Box>
 
                 <Collapse in={expandedCategories[categoryName]}>
@@ -252,6 +380,7 @@ export default function BlockGrid() {
                           )}
                           categories={categories}
                           onBlockUpdated={fetchData}
+                          showPreview={categoryPreviews[categoryName]}
                         />
                       </Grid>
                     ))}
