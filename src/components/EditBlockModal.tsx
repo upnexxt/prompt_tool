@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -11,8 +11,10 @@ import {
   Select,
   MenuItem,
   Box,
+  Typography,
 } from "@mui/material";
 import { supabase } from "../config/supabase";
+import { formatContent } from "../utils/formatContent";
 
 interface Category {
   id: string;
@@ -46,6 +48,22 @@ export default function EditBlockModal({
   const [content, setContent] = useState(block.content);
   const [categoryId, setCategoryId] = useState(block.category_id);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previewContent, setPreviewContent] = useState("");
+
+  // Reset states wanneer een nieuw block wordt bewerkt
+  useEffect(() => {
+    setTitle(block.title);
+    setContent(block.content);
+    setCategoryId(block.category_id);
+    setPreviewContent(formatContent(block.content));
+  }, [block]);
+
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newContent = e.target.value;
+    setContent(newContent);
+    // Update preview met geformatteerde content
+    setPreviewContent(formatContent(newContent));
+  };
 
   const handleSubmit = async () => {
     if (!title || !content || !categoryId) return;
@@ -56,7 +74,7 @@ export default function EditBlockModal({
         .from("blocks")
         .update({
           title,
-          content,
+          content: previewContent || formatContent(content),
           category_id: categoryId,
         })
         .eq("id", block.id);
@@ -102,11 +120,33 @@ export default function EditBlockModal({
           <TextField
             label="Content"
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={handleContentChange}
             multiline
             rows={8}
             fullWidth
+            placeholder="Plak hier je code of markdown tekst. Het wordt automatisch geformatteerd."
           />
+
+          {previewContent && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Preview van geformatteerde content:
+              </Typography>
+              <Box
+                sx={{
+                  p: 2,
+                  bgcolor: "grey.100",
+                  borderRadius: 1,
+                  fontFamily: "monospace",
+                  whiteSpace: "pre-wrap",
+                  maxHeight: "200px",
+                  overflow: "auto",
+                }}
+              >
+                {previewContent}
+              </Box>
+            </Box>
+          )}
         </Box>
       </DialogContent>
       <DialogActions>

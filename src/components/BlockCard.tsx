@@ -21,6 +21,13 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { supabase } from "../config/supabase";
 import EditBlockModal from "./EditBlockModal";
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import {
+  materialDark,
+  materialLight,
+} from "react-syntax-highlighter/dist/esm/styles/prism";
+import remarkGfm from "remark-gfm";
 
 interface BlockCardProps {
   block: {
@@ -87,6 +94,27 @@ export default function BlockCard({
     } catch (error) {
       console.error("Fout bij het verwijderen van blok:", error);
     }
+  };
+
+  // Functie om code blocks te renderen binnen Markdown
+  const CodeBlock = ({ node, inline, className, children, ...props }: any) => {
+    const match = /language-(\w+)/.exec(className || "");
+    const isDark = theme.palette.mode === "dark";
+
+    return !inline && match ? (
+      <SyntaxHighlighter
+        style={isDark ? materialDark : materialLight}
+        language={match[1]}
+        PreTag="div"
+        {...props}
+      >
+        {String(children).replace(/\n$/, "")}
+      </SyntaxHighlighter>
+    ) : (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    );
   };
 
   return (
@@ -213,20 +241,32 @@ export default function BlockCard({
               height: CONTENT_HEIGHT,
               overflow: "auto",
               flexGrow: 1,
+              "& pre": {
+                m: 0,
+                p: 0,
+                bgcolor: "transparent",
+              },
+              "& code": {
+                fontFamily: "monospace",
+                fontSize: "0.875rem",
+              },
+              "& p": {
+                m: 0,
+                mb: 1,
+              },
+              "& > div": {
+                height: "100%",
+              },
             }}
           >
-            <Typography
-              variant="body2"
-              component="pre"
-              sx={{
-                fontFamily: "monospace",
-                whiteSpace: "pre-wrap",
-                m: 0,
-                height: "100%",
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                code: CodeBlock,
               }}
             >
               {block.content}
-            </Typography>
+            </ReactMarkdown>
           </Box>
 
           <Box
