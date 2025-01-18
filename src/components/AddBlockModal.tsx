@@ -1,24 +1,47 @@
 import React, { useState } from "react";
 import {
-  Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  Button,
   TextField,
-  Select,
-  MenuItem,
   FormControl,
   InputLabel,
+  Select,
+  MenuItem,
   Box,
+  IconButton,
   Typography,
+  Divider,
+  Tooltip,
 } from "@mui/material";
 import { supabase } from "../config/supabase";
-import { formatContent } from "../utils/formatContent";
+import AddIcon from "@mui/icons-material/Add";
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import {
+  materialDark,
+  materialLight,
+} from "react-syntax-highlighter/dist/esm/styles/prism";
+import remarkGfm from "remark-gfm";
+
+// Vooraf gedefinieerde kleuren
+const CATEGORY_COLORS = [
+  { name: "Blauw", value: "#2563eb" },
+  { name: "Groen", value: "#16a34a" },
+  { name: "Rood", value: "#dc2626" },
+  { name: "Paars", value: "#9333ea" },
+  { name: "Roze", value: "#db2777" },
+  { name: "Oranje", value: "#ea580c" },
+  { name: "Geel", value: "#ca8a04" },
+  { name: "Grijs", value: "#4b5563" },
+];
 
 interface Category {
   id: string;
   name: string;
+  color?: string;
 }
 
 interface AddBlockModalProps {
@@ -26,6 +49,7 @@ interface AddBlockModalProps {
   onClose: () => void;
   categories: Category[];
   onBlockAdded: () => void;
+  isDarkMode?: boolean;
 }
 
 export default function AddBlockModal({
@@ -33,41 +57,51 @@ export default function AddBlockModal({
   onClose,
   categories,
   onBlockAdded,
+  isDarkMode = false,
 }: AddBlockModalProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [previewContent, setPreviewContent] = useState("");
-
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value;
-    setContent(newContent);
-    // Update preview met geformatteerde content
-    setPreviewContent(formatContent(newContent));
-  };
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryColor, setNewCategoryColor] = useState("#2563eb"); // Default blauw
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleSubmit = async () => {
-    if (!title || !content || !categoryId) return;
-
-    setIsSubmitting(true);
     try {
-      const { error } = await supabase.from("blocks").insert([
+      let selectedCategoryId = categoryId;
+
+      // Als er een nieuwe categorie is ingevuld, maak deze eerst aan
+      if (showNewCategory && newCategoryName.trim()) {
+        const { data: newCategory, error: categoryError } = await supabase
+          .from("categories")
+          .insert([
+            {
+              name: newCategoryName.trim(),
+              color: newCategoryColor,
+            },
+          ])
+          .select()
+          .single();
+
+        if (categoryError) throw categoryError;
+        selectedCategoryId = newCategory.id;
+      }
+
+      const { error: blockError } = await supabase.from("blocks").insert([
         {
           title,
-          content: previewContent || formatContent(content), // Gebruik geformatteerde content
-          category_id: categoryId,
+          content,
+          category_id: selectedCategoryId,
         },
       ]);
 
-      if (error) throw error;
+      if (blockError) throw blockError;
 
       onBlockAdded();
       handleClose();
     } catch (error) {
-      console.error("Fout bij het toevoegen van blok:", error);
-    } finally {
-      setIsSubmitting(false);
+      console.error("Fout bij het toevoegen van block:", error);
     }
   };
 
@@ -75,67 +109,202 @@ export default function AddBlockModal({
     setTitle("");
     setContent("");
     setCategoryId("");
-    setPreviewContent("");
+    setShowNewCategory(false);
+    setNewCategoryName("");
+    setNewCategoryColor("#2563eb");
+    setShowPreview(false);
     onClose();
+  };
+
+  // Sorteer categorieën alfabetisch
+  const sortedCategories = [...categories].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+
+  const isValid = () => {
+    if (showNewCategory) {
+      return title.trim() && content.trim() && newCategoryName.trim();
+    }
+    return title.trim() && content.trim() && categoryId;
   };
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>Nieuw Blok Toevoegen</DialogTitle>
+      <DialogTitle>Nieuw Block Toevoegen</DialogTitle>
       <DialogContent>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+          {/* Categorie Selectie */}
+          <Box>
+            {!showNewCategory ? (
+              <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+                <FormControl fullWidth>
+                  <InputLabel>Categorie</InputLabel>
+                  <Select
+                    value={categoryId}
+                    label="Categorie"
+                    onChange={(e) => setCategoryId(e.target.value)}
+                  >
+                    {sortedCategories.map((category) => (
+                      <MenuItem key={category.id} value={category.id}>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
+                          <Box
+                            sx={{
+                              width: 16,
+                              height: 16,
+                              borderRadius: "50%",
+                              bgcolor: category.color || "#2563eb",
+                            }}
+                          />
+                          {category.name}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Tooltip title="Nieuwe categorie toevoegen">
+                  <IconButton
+                    onClick={() => setShowNewCategory(true)}
+                    color="primary"
+                    sx={{ mt: 1 }}
+                  >
+                    <AddIcon />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            ) : (
+              <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
+                <TextField
+                  sx={{ flex: 1 }}
+                  label="Nieuwe Categorie"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                />
+                <FormControl sx={{ width: 150 }}>
+                  <InputLabel>Kleur</InputLabel>
+                  <Select
+                    value={newCategoryColor}
+                    label="Kleur"
+                    onChange={(e) => setNewCategoryColor(e.target.value)}
+                  >
+                    {CATEGORY_COLORS.map((color) => (
+                      <MenuItem key={color.value} value={color.value}>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
+                          <Box
+                            sx={{
+                              width: 16,
+                              height: 16,
+                              borderRadius: "50%",
+                              bgcolor: color.value,
+                            }}
+                          />
+                          {color.name}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Tooltip title="Bestaande categorie kiezen">
+                  <IconButton
+                    onClick={() => {
+                      setShowNewCategory(false);
+                      setNewCategoryName("");
+                      setNewCategoryColor("#2563eb");
+                    }}
+                    size="small"
+                    sx={{ mt: 1 }}
+                  >
+                    <AddIcon sx={{ transform: "rotate(45deg)" }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            )}
+          </Box>
+
+          {/* Titel */}
           <TextField
+            fullWidth
             label="Titel"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            fullWidth
           />
 
-          <FormControl fullWidth>
-            <InputLabel>Categorie</InputLabel>
-            <Select
-              value={categoryId}
-              label="Categorie"
-              onChange={(e) => setCategoryId(e.target.value)}
+          {/* Content met Preview */}
+          <Box>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 1,
+              }}
             >
-              {categories.map((category) => (
-                <MenuItem key={category.id} value={category.id}>
-                  {category.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <TextField
-            label="Content"
-            value={content}
-            onChange={handleContentChange}
-            multiline
-            rows={8}
-            fullWidth
-            placeholder="Plak hier je code of markdown tekst. Het wordt automatisch geformatteerd."
-          />
-
-          {previewContent && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Preview van geformatteerde content:
+              <Typography variant="subtitle2" color="text.secondary">
+                Content (Markdown)
               </Typography>
-              <Box
-                sx={{
-                  p: 2,
-                  bgcolor: "grey.100",
-                  borderRadius: 1,
-                  fontFamily: "monospace",
-                  whiteSpace: "pre-wrap",
-                  maxHeight: "200px",
-                  overflow: "auto",
-                }}
-              >
-                {previewContent}
-              </Box>
+              <Button size="small" onClick={() => setShowPreview(!showPreview)}>
+                {showPreview ? "Bewerk" : "Preview"}
+              </Button>
             </Box>
-          )}
+
+            <Box sx={{ display: "flex", gap: 2, minHeight: 300 }}>
+              <TextField
+                fullWidth
+                multiline
+                rows={12}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                sx={{
+                  display: showPreview ? "none" : "block",
+                  "& .MuiInputBase-root": {
+                    fontFamily: "monospace",
+                  },
+                }}
+              />
+
+              {showPreview && (
+                <Box
+                  sx={{
+                    flex: 1,
+                    p: 2,
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: 1,
+                    bgcolor: "background.paper",
+                    overflow: "auto",
+                  }}
+                >
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      code({ node, inline, className, children, ...props }) {
+                        const match = /language-(\w+)/.exec(className || "");
+                        return !inline && match ? (
+                          <SyntaxHighlighter
+                            style={isDarkMode ? materialDark : materialLight}
+                            language={match[1]}
+                            PreTag="div"
+                            {...props}
+                          >
+                            {String(children).replace(/\n$/, "")}
+                          </SyntaxHighlighter>
+                        ) : (
+                          <code className={className} {...props}>
+                            {children}
+                          </code>
+                        );
+                      },
+                    }}
+                  >
+                    {content}
+                  </ReactMarkdown>
+                </Box>
+              )}
+            </Box>
+          </Box>
         </Box>
       </DialogContent>
       <DialogActions>
@@ -143,7 +312,7 @@ export default function AddBlockModal({
         <Button
           onClick={handleSubmit}
           variant="contained"
-          disabled={!title || !content || !categoryId || isSubmitting}
+          disabled={!isValid()}
         >
           Toevoegen
         </Button>

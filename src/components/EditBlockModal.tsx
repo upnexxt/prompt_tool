@@ -14,13 +14,13 @@ import {
   Typography,
 } from "@mui/material";
 import { supabase } from "../config/supabase";
-import { formatContent } from "../utils/formatContent";
-
-interface Category {
-  id: string;
-  name: string;
-  color?: string;
-}
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import {
+  materialDark,
+  materialLight,
+} from "react-syntax-highlighter/dist/esm/styles/prism";
+import remarkGfm from "remark-gfm";
 
 interface Block {
   id: string;
@@ -29,12 +29,19 @@ interface Block {
   category_id: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  color?: string;
+}
+
 interface EditBlockModalProps {
   open: boolean;
   onClose: () => void;
   block: Block;
   categories: Category[];
   onBlockUpdated: () => void;
+  isDarkMode?: boolean;
 }
 
 export default function EditBlockModal({
@@ -43,38 +50,26 @@ export default function EditBlockModal({
   block,
   categories,
   onBlockUpdated,
+  isDarkMode = false,
 }: EditBlockModalProps) {
   const [title, setTitle] = useState(block.title);
   const [content, setContent] = useState(block.content);
   const [categoryId, setCategoryId] = useState(block.category_id);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [previewContent, setPreviewContent] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
 
-  // Reset states wanneer een nieuw block wordt bewerkt
   useEffect(() => {
     setTitle(block.title);
     setContent(block.content);
     setCategoryId(block.category_id);
-    setPreviewContent(formatContent(block.content));
   }, [block]);
 
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value;
-    setContent(newContent);
-    // Update preview met geformatteerde content
-    setPreviewContent(formatContent(newContent));
-  };
-
   const handleSubmit = async () => {
-    if (!title || !content || !categoryId) return;
-
-    setIsSubmitting(true);
     try {
       const { error } = await supabase
         .from("blocks")
         .update({
           title,
-          content: previewContent || formatContent(content),
+          content,
           category_id: categoryId,
         })
         .eq("id", block.id);
@@ -82,26 +77,30 @@ export default function EditBlockModal({
       if (error) throw error;
 
       onBlockUpdated();
-      onClose();
+      handleClose();
     } catch (error) {
-      console.error("Fout bij het bijwerken van blok:", error);
-    } finally {
-      setIsSubmitting(false);
+      console.error("Fout bij het bijwerken van block:", error);
     }
   };
 
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Blok Bewerken</DialogTitle>
-      <DialogContent>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 2 }}>
-          <TextField
-            label="Titel"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            fullWidth
-          />
+  const handleClose = () => {
+    setTitle(block.title);
+    setContent(block.content);
+    setCategoryId(block.category_id);
+    setShowPreview(false);
+    onClose();
+  };
 
+  // Sorteer categorieën alfabetisch
+  const sortedCategories = [...categories].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+
+  return (
+    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+      <DialogTitle>Block Bewerken</DialogTitle>
+      <DialogContent>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
           <FormControl fullWidth>
             <InputLabel>Categorie</InputLabel>
             <Select
@@ -109,52 +108,111 @@ export default function EditBlockModal({
               label="Categorie"
               onChange={(e) => setCategoryId(e.target.value)}
             >
-              {categories.map((category) => (
+              {sortedCategories.map((category) => (
                 <MenuItem key={category.id} value={category.id}>
-                  {category.name}
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Box
+                      sx={{
+                        width: 16,
+                        height: 16,
+                        borderRadius: "50%",
+                        bgcolor: category.color || "#2563eb",
+                      }}
+                    />
+                    {category.name}
+                  </Box>
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
 
           <TextField
-            label="Content"
-            value={content}
-            onChange={handleContentChange}
-            multiline
-            rows={8}
             fullWidth
-            placeholder="Plak hier je code of markdown tekst. Het wordt automatisch geformatteerd."
+            label="Titel"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
           />
 
-          {previewContent && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Preview van geformatteerde content:
+          <Box>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 1,
+              }}
+            >
+              <Typography variant="subtitle2" color="text.secondary">
+                Content (Markdown)
               </Typography>
-              <Box
-                sx={{
-                  p: 2,
-                  bgcolor: "grey.100",
-                  borderRadius: 1,
-                  fontFamily: "monospace",
-                  whiteSpace: "pre-wrap",
-                  maxHeight: "200px",
-                  overflow: "auto",
-                }}
-              >
-                {previewContent}
-              </Box>
+              <Button size="small" onClick={() => setShowPreview(!showPreview)}>
+                {showPreview ? "Bewerk" : "Preview"}
+              </Button>
             </Box>
-          )}
+
+            <Box sx={{ display: "flex", gap: 2, minHeight: 300 }}>
+              <TextField
+                fullWidth
+                multiline
+                rows={12}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                sx={{
+                  display: showPreview ? "none" : "block",
+                  "& .MuiInputBase-root": {
+                    fontFamily: "monospace",
+                  },
+                }}
+              />
+
+              {showPreview && (
+                <Box
+                  sx={{
+                    flex: 1,
+                    p: 2,
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: 1,
+                    bgcolor: "background.paper",
+                    overflow: "auto",
+                  }}
+                >
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      code({ node, inline, className, children, ...props }) {
+                        const match = /language-(\w+)/.exec(className || "");
+                        return !inline && match ? (
+                          <SyntaxHighlighter
+                            style={isDarkMode ? materialDark : materialLight}
+                            language={match[1]}
+                            PreTag="div"
+                            {...props}
+                          >
+                            {String(children).replace(/\n$/, "")}
+                          </SyntaxHighlighter>
+                        ) : (
+                          <code className={className} {...props}>
+                            {children}
+                          </code>
+                        );
+                      },
+                    }}
+                  >
+                    {content}
+                  </ReactMarkdown>
+                </Box>
+              )}
+            </Box>
+          </Box>
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Annuleren</Button>
+        <Button onClick={handleClose}>Annuleren</Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
-          disabled={!title || !content || !categoryId || isSubmitting}
+          disabled={!title.trim() || !content.trim() || !categoryId}
         >
           Opslaan
         </Button>

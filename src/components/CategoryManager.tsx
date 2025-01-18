@@ -3,21 +3,36 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
-  Button,
+  Box,
+  TextField,
+  IconButton,
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
-  IconButton,
-  TextField,
-  Box,
-  Typography,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   Tooltip,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
-import ColorLensIcon from "@mui/icons-material/ColorLens";
+import EditIcon from "@mui/icons-material/Edit";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
 import { supabase } from "../config/supabase";
+
+// Hergebruik dezelfde kleuren als in AddBlockModal
+const CATEGORY_COLORS = [
+  { name: "Blauw", value: "#2563eb" },
+  { name: "Groen", value: "#16a34a" },
+  { name: "Rood", value: "#dc2626" },
+  { name: "Paars", value: "#9333ea" },
+  { name: "Roze", value: "#db2777" },
+  { name: "Oranje", value: "#ea580c" },
+  { name: "Geel", value: "#ca8a04" },
+  { name: "Grijs", value: "#4b5563" },
+];
 
 interface Category {
   id: string;
@@ -32,25 +47,6 @@ interface CategoryManagerProps {
   onCategoriesChanged: () => void;
 }
 
-const DEFAULT_COLORS = [
-  "#f44336", // Rood
-  "#e91e63", // Roze
-  "#9c27b0", // Paars
-  "#673ab7", // Diep Paars
-  "#3f51b5", // Indigo
-  "#2196f3", // Blauw
-  "#03a9f4", // Licht Blauw
-  "#00bcd4", // Cyaan
-  "#009688", // Teal
-  "#4caf50", // Groen
-  "#8bc34a", // Licht Groen
-  "#cddc39", // Limoen
-  "#ffeb3b", // Geel
-  "#ffc107", // Amber
-  "#ff9800", // Oranje
-  "#ff5722", // Diep Oranje
-];
-
 export default function CategoryManager({
   open,
   onClose,
@@ -58,14 +54,14 @@ export default function CategoryManager({
   onCategoriesChanged,
 }: CategoryManagerProps) {
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [newCategoryColor, setNewCategoryColor] = useState(DEFAULT_COLORS[0]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
+  const [newCategoryColor, setNewCategoryColor] = useState("#2563eb");
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editColor, setEditColor] = useState("");
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
 
-    setIsSubmitting(true);
     try {
       const { error } = await supabase.from("categories").insert([
         {
@@ -77,53 +73,15 @@ export default function CategoryManager({
       if (error) throw error;
 
       setNewCategoryName("");
-      setNewCategoryColor(DEFAULT_COLORS[0]);
+      setNewCategoryColor("#2563eb");
       onCategoriesChanged();
     } catch (error) {
       console.error("Fout bij het toevoegen van categorie:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleUpdateCategoryColor = async (
-    categoryId: string,
-    newColor: string
-  ) => {
-    try {
-      console.log("Updating category color:", { categoryId, newColor });
-
-      const { error, data } = await supabase
-        .from("categories")
-        .update({ color: newColor })
-        .eq("id", categoryId)
-        .select();
-
-      console.log("Update result:", { error, data });
-
-      if (error) throw error;
-
-      onCategoriesChanged();
-      setShowColorPicker(null);
-    } catch (error) {
-      console.error("Fout bij het bijwerken van categorie kleur:", error);
     }
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
     try {
-      const { data: blocks } = await supabase
-        .from("blocks")
-        .select("id")
-        .eq("category_id", categoryId);
-
-      if (blocks && blocks.length > 0) {
-        alert(
-          "Deze categorie kan niet worden verwijderd omdat er nog blokken aan gekoppeld zijn."
-        );
-        return;
-      }
-
       const { error } = await supabase
         .from("categories")
         .delete()
@@ -137,123 +95,212 @@ export default function CategoryManager({
     }
   };
 
+  const handleStartEdit = (category: Category) => {
+    setEditingCategory(category.id);
+    setEditName(category.name);
+    setEditColor(category.color || "#2563eb");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCategory(null);
+    setEditName("");
+    setEditColor("");
+  };
+
+  const handleSaveEdit = async (categoryId: string) => {
+    if (!editName.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from("categories")
+        .update({
+          name: editName.trim(),
+          color: editColor,
+        })
+        .eq("id", categoryId);
+
+      if (error) throw error;
+
+      handleCancelEdit();
+      onCategoriesChanged();
+    } catch (error) {
+      console.error("Fout bij het bijwerken van categorie:", error);
+    }
+  };
+
+  // Sorteer categorieën alfabetisch
+  const sortedCategories = [...categories].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Categorieën Beheren</DialogTitle>
       <DialogContent>
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            Nieuwe Categorie Toevoegen
-          </Typography>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+          {/* Nieuwe categorie toevoegen */}
+          <Box sx={{ display: "flex", gap: 1 }}>
             <TextField
+              sx={{ flex: 1 }}
+              label="Nieuwe Categorie"
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
-              placeholder="Categorienaam"
               size="small"
-              fullWidth
             />
-            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-              {DEFAULT_COLORS.map((color) => (
-                <Tooltip key={color} title="Kies deze kleur">
-                  <Box
-                    onClick={() => setNewCategoryColor(color)}
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      bgcolor: color,
-                      borderRadius: 1,
-                      cursor: "pointer",
-                      border:
-                        newCategoryColor === color ? "3px solid black" : "none",
-                    }}
-                  />
-                </Tooltip>
-              ))}
-            </Box>
+            <FormControl sx={{ width: 150 }} size="small">
+              <InputLabel>Kleur</InputLabel>
+              <Select
+                value={newCategoryColor}
+                label="Kleur"
+                onChange={(e) => setNewCategoryColor(e.target.value)}
+              >
+                {CATEGORY_COLORS.map((color) => (
+                  <MenuItem key={color.value} value={color.value}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box
+                        sx={{
+                          width: 16,
+                          height: 16,
+                          borderRadius: "50%",
+                          bgcolor: color.value,
+                        }}
+                      />
+                      {color.name}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             <Button
               variant="contained"
               onClick={handleAddCategory}
-              disabled={!newCategoryName.trim() || isSubmitting}
+              disabled={!newCategoryName.trim()}
             >
               Toevoegen
             </Button>
           </Box>
-        </Box>
 
-        <Typography variant="subtitle1" gutterBottom>
-          Bestaande Categorieën
-        </Typography>
-        <List>
-          {categories.map((category) => (
-            <ListItem
-              key={category.id}
-              sx={{
-                borderLeft: `4px solid ${category.color || "#grey"}`,
-                mb: 1,
-                bgcolor: "background.paper",
-                borderRadius: 1,
-              }}
-            >
-              <ListItemText primary={category.name} />
-              <ListItemSecondaryAction>
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  {showColorPicker === category.id ? (
-                    <Box
-                      sx={{
-                        display: "flex",
-                        gap: 0.5,
-                        flexWrap: "wrap",
-                        maxWidth: 200,
-                      }}
-                    >
-                      {DEFAULT_COLORS.map((color) => (
-                        <Box
-                          key={color}
-                          onClick={() =>
-                            handleUpdateCategoryColor(category.id, color)
-                          }
-                          sx={{
-                            width: 24,
-                            height: 24,
-                            bgcolor: color,
-                            borderRadius: 0.5,
-                            cursor: "pointer",
-                            border:
-                              category.color === color
-                                ? "2px solid black"
-                                : "none",
-                          }}
-                        />
-                      ))}
-                    </Box>
-                  ) : (
-                    <Tooltip title="Kleur aanpassen">
-                      <IconButton
-                        onClick={() => setShowColorPicker(category.id)}
+          {/* Lijst van bestaande categorieën */}
+          <List sx={{ width: "100%" }}>
+            {sortedCategories.map((category) => (
+              <ListItem
+                key={category.id}
+                sx={{
+                  bgcolor:
+                    editingCategory === category.id
+                      ? "action.hover"
+                      : "transparent",
+                  borderRadius: 1,
+                  p: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    width: "100%",
+                  }}
+                >
+                  {editingCategory === category.id ? (
+                    <>
+                      <TextField
                         size="small"
-                      >
-                        <ColorLensIcon />
-                      </IconButton>
-                    </Tooltip>
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        sx={{ flex: 1 }}
+                      />
+                      <FormControl size="small" sx={{ width: 150 }}>
+                        <InputLabel>Kleur</InputLabel>
+                        <Select
+                          value={editColor}
+                          label="Kleur"
+                          onChange={(e) => setEditColor(e.target.value)}
+                        >
+                          {CATEGORY_COLORS.map((color) => (
+                            <MenuItem key={color.value} value={color.value}>
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    width: 16,
+                                    height: 16,
+                                    borderRadius: "50%",
+                                    bgcolor: color.value,
+                                  }}
+                                />
+                                {color.name}
+                              </Box>
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <Box sx={{ display: "flex", gap: 0.5, ml: 1 }}>
+                        <Tooltip title="Opslaan">
+                          <IconButton
+                            onClick={() => handleSaveEdit(category.id)}
+                            color="primary"
+                            size="small"
+                          >
+                            <CheckIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Annuleren">
+                          <IconButton onClick={handleCancelEdit} size="small">
+                            <CloseIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </>
+                  ) : (
+                    <>
+                      <Box
+                        sx={{
+                          width: 16,
+                          height: 16,
+                          borderRadius: "50%",
+                          bgcolor: category.color || "#2563eb",
+                        }}
+                      />
+                      <ListItemText primary={category.name} sx={{ flex: 1 }} />
+                      <Box sx={{ display: "flex", gap: 0.5 }}>
+                        <Tooltip title="Bewerken">
+                          <IconButton
+                            onClick={() => handleStartEdit(category)}
+                            size="small"
+                          >
+                            <EditIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Verwijderen">
+                          <IconButton
+                            onClick={() => handleDeleteCategory(category.id)}
+                            sx={{
+                              "&:hover": {
+                                "& .MuiSvgIcon-root": {
+                                  color: "error.main",
+                                },
+                              },
+                            }}
+                            size="small"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </>
                   )}
-                  <IconButton
-                    edge="end"
-                    aria-label="delete"
-                    onClick={() => handleDeleteCategory(category.id)}
-                    size="small"
-                  >
-                    <DeleteIcon />
-                  </IconButton>
                 </Box>
-              </ListItemSecondaryAction>
-            </ListItem>
-          ))}
-        </List>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Sluiten</Button>
-      </DialogActions>
     </Dialog>
   );
 }

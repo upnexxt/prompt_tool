@@ -16,6 +16,12 @@ import {
   FormControlLabel,
   Checkbox,
   FormGroup,
+  TextField,
+  ListSubheader,
+  InputAdornment,
+  ListItemIcon,
+  ListItemText,
+  SelectChangeEvent,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import CategoryIcon from "@mui/icons-material/Category";
@@ -31,6 +37,8 @@ import ClearIcon from "@mui/icons-material/Clear";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
 import PaletteIcon from "@mui/icons-material/Palette";
+import SearchIcon from "@mui/icons-material/Search";
+import ClearAllIcon from "@mui/icons-material/ClearAll";
 
 interface Block {
   id: string;
@@ -61,6 +69,8 @@ export default function BlockGrid({
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
+  const [categorySearchQuery, setCategorySearchQuery] = useState("");
+  const [isAllSelected, setIsAllSelected] = useState(true);
 
   // Laad de opgeslagen states uit localStorage of gebruik defaults
   const [expandedCategories, setExpandedCategories] = useState<
@@ -85,7 +95,7 @@ export default function BlockGrid({
 
     categories.forEach((category) => {
       if (initialExpanded[category.name] === undefined) {
-        initialExpanded[category.name] = true;
+        initialExpanded[category.name] = false;
         hasChanges = true;
       }
       if (initialPreviews[category.name] === undefined) {
@@ -96,7 +106,7 @@ export default function BlockGrid({
 
     // Voeg "Geen Categorie" toe als die nog niet bestaat
     if (initialExpanded["Geen Categorie"] === undefined) {
-      initialExpanded["Geen Categorie"] = true;
+      initialExpanded["Geen Categorie"] = false;
       hasChanges = true;
     }
     if (initialPreviews["Geen Categorie"] === undefined) {
@@ -124,18 +134,16 @@ export default function BlockGrid({
 
   // Ook de geselecteerde categorieën opslaan
   useEffect(() => {
-    const allCategoryIds = categories.map((cat) => cat.id);
-    const savedSelected = localStorage.getItem("selectedCategories");
-    if (savedSelected) {
-      // Filter out any saved categories that no longer exist
-      const validSelected = JSON.parse(savedSelected).filter((id: string) =>
-        allCategoryIds.includes(id)
-      );
-      setSelectedCategories(
-        validSelected.length ? validSelected : allCategoryIds
-      );
+    const savedCategories = localStorage.getItem("selectedCategories");
+    if (savedCategories) {
+      const parsedCategories = JSON.parse(savedCategories);
+      setSelectedCategories(parsedCategories);
+      // Controleer of alle categorieën waren geselecteerd
+      setIsAllSelected(parsedCategories.length === categories.length);
     } else {
-      setSelectedCategories(allCategoryIds);
+      // Als er geen opgeslagen selectie is, selecteer dan alle categorieën
+      setSelectedCategories(categories.map((cat) => cat.id));
+      setIsAllSelected(true);
     }
   }, [categories]);
 
@@ -178,6 +186,11 @@ export default function BlockGrid({
       if (categoriesError) throw categoriesError;
       setCategories(categoriesData || []);
 
+      // Als alle categorieën geselecteerd waren, selecteer dan ook de nieuwe
+      if (isAllSelected) {
+        setSelectedCategories((categoriesData || []).map((cat) => cat.id));
+      }
+
       const { data: blocksData, error: blocksError } = await supabase
         .from("blocks")
         .select("*");
@@ -204,8 +217,8 @@ export default function BlockGrid({
   };
 
   const handleSelectAll = () => {
-    const allCategoryIds = categories.map((cat) => cat.id);
-    setSelectedCategories(allCategoryIds);
+    setSelectedCategories(categories.map((cat) => cat.id));
+    setIsAllSelected(true);
   };
 
   const filteredBlocks = blocks.filter(
@@ -229,6 +242,12 @@ export default function BlockGrid({
     return a.title.localeCompare(b.title);
   });
 
+  const filteredCategories = categories
+    .filter((category) =>
+      category.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   const groupedBlocks = sortedBlocks.reduce((groups, block) => {
     const category = categories.find((c) => c.id === block.category_id);
     const categoryName = category?.name || "Geen Categorie";
@@ -240,6 +259,13 @@ export default function BlockGrid({
     groups[categoryName].push(block);
     return groups;
   }, {} as Record<string, typeof blocks>);
+
+  // Sorteer de categorieën voor weergave, met "Geen Categorie" als laatste
+  const sortedGroupedBlocks = Object.entries(groupedBlocks).sort((a, b) => {
+    if (a[0] === "Geen Categorie") return 1;
+    if (b[0] === "Geen Categorie") return -1;
+    return a[0].localeCompare(b[0]);
+  });
 
   const toggleCategoryPreview = (categoryName: string) => {
     setCategoryPreviews((prev) => ({
@@ -258,6 +284,94 @@ export default function BlockGrid({
     });
 
     setCategoryPreviews(newPreviews);
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedCategories([]);
+    setIsAllSelected(false);
+  };
+
+  // Aangepaste useEffect voor het ophalen van categorieën
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("categories")
+          .select("*")
+          .order("name");
+
+        if (error) throw error;
+
+        if (data) {
+          setCategories(data);
+          // Als alle categorieën waren geselecteerd, selecteer dan ook de nieuwe
+          if (isAllSelected) {
+            setSelectedCategories(data.map((cat) => cat.id));
+          }
+        }
+      } catch (error) {
+        console.error("Fout bij het ophalen van categorieën:", error);
+      }
+    };
+
+    fetchCategories();
+  }, [isAllSelected]); // Voeg isAllSelected toe aan de dependencies
+
+  const handleCategoryChange = (event: SelectChangeEvent<string[]>) => {
+    const value = event.target.value;
+    const newSelected = typeof value === "string" ? value.split(",") : value;
+    setSelectedCategories(newSelected);
+    // Update isAllSelected op basis van de nieuwe selectie
+    setIsAllSelected(newSelected.length === categories.length);
+
+    // Sla de nieuwe selectie op in localStorage
+    localStorage.setItem("selectedCategories", JSON.stringify(newSelected));
+  };
+
+  const handleBlockAdded = async () => {
+    // Haal eerst de nieuwe data op
+    const { data: categoriesData, error: categoriesError } = await supabase
+      .from("categories")
+      .select("*");
+
+    if (categoriesError) {
+      console.error("Fout bij het ophalen van categorieën:", categoriesError);
+      return;
+    }
+
+    // Update de categorieën
+    setCategories(categoriesData || []);
+
+    // Als alle categorieën geselecteerd waren, update dan de selectie
+    if (isAllSelected) {
+      const newSelectedCategories = (categoriesData || []).map((cat) => cat.id);
+      setSelectedCategories(newSelectedCategories);
+      localStorage.setItem(
+        "selectedCategories",
+        JSON.stringify(newSelectedCategories)
+      );
+    }
+
+    // Haal de blokken op
+    const { data: blocksData, error: blocksError } = await supabase
+      .from("blocks")
+      .select("*");
+
+    if (blocksError) {
+      console.error("Fout bij het ophalen van blokken:", blocksError);
+      return;
+    }
+
+    setBlocks(blocksData || []);
+
+    // Zorg dat nieuwe categorieën uitgeklapt zijn
+    const newExpanded = { ...expandedCategories };
+    categoriesData?.forEach((category) => {
+      if (newExpanded[category.name] === undefined) {
+        newExpanded[category.name] = true; // Nieuwe categorieën uitgeklapt
+      }
+    });
+    setExpandedCategories(newExpanded);
   };
 
   return (
@@ -282,23 +396,76 @@ export default function BlockGrid({
                   setSelectedCategories(e.target.value as string[])
                 }
                 renderValue={(selected) => {
-                  return selected
-                    .map(
-                      (id) =>
-                        categories.find((cat) => cat.id === id)?.name || ""
-                    )
-                    .filter(Boolean)
-                    .join(", ");
+                  const count = selected.length;
+                  const total = categories.length;
+                  if (count === total) return "Alle categorieën";
+                  if (count === 0) return "Geen categorieën";
+                  return `${count} ${
+                    count === 1 ? "categorie" : "categorieën"
+                  }`;
                 }}
                 MenuProps={{
                   PaperProps: {
                     style: {
-                      maxHeight: 300,
+                      maxHeight: 400,
                     },
                   },
                 }}
               >
-                {categories.map((category) => (
+                <ListSubheader sx={{ p: 0 }}>
+                  <Box sx={{ p: 1, pb: 0 }}>
+                    <TextField
+                      size="small"
+                      fullWidth
+                      placeholder="Zoek categorie..."
+                      value={categorySearchQuery}
+                      onChange={(e) => setCategorySearchQuery(e.target.value)}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon fontSize="small" />
+                          </InputAdornment>
+                        ),
+                        endAdornment: categorySearchQuery && (
+                          <InputAdornment position="end">
+                            <IconButton
+                              size="small"
+                              onClick={() => setCategorySearchQuery("")}
+                            >
+                              <ClearIcon fontSize="small" />
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  </Box>
+                  <MenuItem
+                    onClick={handleDeselectAll}
+                    sx={{
+                      borderBottom: 0,
+                      color: "text.secondary",
+                    }}
+                  >
+                    <ListItemIcon>
+                      <ClearAllIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Deselecteer alles</ListItemText>
+                  </MenuItem>
+                  <MenuItem
+                    onClick={handleSelectAll}
+                    sx={{
+                      borderBottom: 1,
+                      borderColor: "divider",
+                      color: "text.secondary",
+                    }}
+                  >
+                    <ListItemIcon>
+                      <CategoryIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Selecteer alles</ListItemText>
+                  </MenuItem>
+                </ListSubheader>
+                {filteredCategories.map((category) => (
                   <MenuItem key={category.id} value={category.id}>
                     <Checkbox
                       checked={selectedCategories.includes(category.id)}
@@ -380,101 +547,100 @@ export default function BlockGrid({
         </Box>
 
         <Box>
-          {Object.entries(groupedBlocks).map(
-            ([categoryName, categoryBlocks]) => (
-              <Box key={categoryName} sx={{ mb: 2 }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    mb: expandedCategories[categoryName] ? 1 : 0,
-                    cursor: "pointer",
-                    "&:hover": {
-                      "& .MuiIconButton-root": {
-                        opacity: 1,
-                      },
+          {sortedGroupedBlocks.map(([categoryName, categoryBlocks]) => (
+            <Box key={categoryName} sx={{ mb: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  mb: expandedCategories[categoryName] ? 1 : 0,
+                  cursor: "pointer",
+                  "&:hover": {
+                    "& .MuiIconButton-root": {
+                      opacity: 1,
                     },
+                  },
+                }}
+              >
+                <IconButton
+                  size="small"
+                  className="MuiIconButton-root"
+                  sx={{
+                    mr: 1,
+                    opacity: 0.5,
+                    transition: "opacity 0.2s",
                   }}
+                  onClick={() => toggleCategory(categoryName)}
+                >
+                  {expandedCategories[categoryName] ? (
+                    <ExpandLessIcon />
+                  ) : (
+                    <ExpandMoreIcon />
+                  )}
+                </IconButton>
+                <Typography
+                  variant="h6"
+                  component="h2"
+                  sx={{
+                    mr: 2,
+                    fontSize: "1.1rem",
+                    flex: 1,
+                  }}
+                  onClick={() => toggleCategory(categoryName)}
+                >
+                  {categoryName}
+                </Typography>
+                <Tooltip
+                  title={
+                    categoryPreviews[categoryName]
+                      ? "Verberg previews"
+                      : "Toon previews"
+                  }
+                  sx={{ opacity: 0.5, "&:hover": { opacity: 1 } }}
                 >
                   <IconButton
                     size="small"
-                    className="MuiIconButton-root"
-                    sx={{
-                      mr: 1,
-                      opacity: 0.5,
-                      transition: "opacity 0.2s",
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleCategoryPreview(categoryName);
                     }}
-                    onClick={() => toggleCategory(categoryName)}
                   >
-                    {expandedCategories[categoryName] ? (
-                      <ExpandLessIcon />
+                    {categoryPreviews[categoryName] ? (
+                      <VisibilityOffIcon fontSize="small" />
                     ) : (
-                      <ExpandMoreIcon />
+                      <VisibilityIcon fontSize="small" />
                     )}
                   </IconButton>
-                  <Typography
-                    variant="h6"
-                    component="h2"
-                    sx={{
-                      mr: 2,
-                      fontSize: "1.1rem",
-                      flex: 1,
-                    }}
-                    onClick={() => toggleCategory(categoryName)}
-                  >
-                    {categoryName}
-                  </Typography>
-                  <Tooltip
-                    title={
-                      categoryPreviews[categoryName]
-                        ? "Verberg previews"
-                        : "Toon previews"
-                    }
-                    sx={{ opacity: 0.5, "&:hover": { opacity: 1 } }}
-                  >
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleCategoryPreview(categoryName);
-                      }}
-                    >
-                      {categoryPreviews[categoryName] ? (
-                        <VisibilityOffIcon fontSize="small" />
-                      ) : (
-                        <VisibilityIcon fontSize="small" />
-                      )}
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-
-                <Collapse in={expandedCategories[categoryName]}>
-                  <Grid container spacing={2}>
-                    {categoryBlocks.map((block) => (
-                      <Grid item xs={12} sm={6} md={3} key={block.id}>
-                        <BlockCard
-                          block={block}
-                          category={categories.find(
-                            (c) => c.id === block.category_id
-                          )}
-                          categories={categories}
-                          onBlockUpdated={fetchData}
-                          showPreview={categoryPreviews[categoryName]}
-                        />
-                      </Grid>
-                    ))}
-                  </Grid>
-                </Collapse>
+                </Tooltip>
               </Box>
-            )
-          )}
+
+              <Collapse in={expandedCategories[categoryName]}>
+                <Grid container spacing={2}>
+                  {categoryBlocks.map((block) => (
+                    <Grid item xs={12} sm={6} md={3} key={block.id}>
+                      <BlockCard
+                        block={block}
+                        category={categories.find(
+                          (c) => c.id === block.category_id
+                        )}
+                        categories={categories}
+                        onBlockUpdated={fetchData}
+                        showPreview={categoryPreviews[categoryName]}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Collapse>
+            </Box>
+          ))}
         </Box>
 
         <AddBlockModal
           open={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
           categories={categories}
-          onBlockAdded={fetchData}
+          onBlockAdded={handleBlockAdded}
+          isDarkMode={isDarkMode}
         />
 
         <CategoryManager

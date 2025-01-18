@@ -167,7 +167,18 @@ export default function ThemeSettings({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{
+        sx: {
+          minHeight: "70vh",
+          maxHeight: "90vh",
+        },
+      }}
+    >
       <DialogTitle>Thema Instellingen</DialogTitle>
       <Tabs
         value={tabValue}
@@ -189,7 +200,7 @@ export default function ThemeSettings({
           aria-controls="settings-tabpanel-1"
         />
       </Tabs>
-      <DialogContent>
+      <DialogContent sx={{ p: 2 }}>
         <TabPanel value={tabValue} index={0}>
           <Box sx={{ mb: 2 }}>
             <FormControlLabel
@@ -207,7 +218,18 @@ export default function ThemeSettings({
           <Typography variant="subtitle1" gutterBottom>
             Kies een kleurenschema:
           </Typography>
-          <List>
+          <List
+            sx={{
+              maxHeight: "calc(70vh - 250px)",
+              overflow: "auto",
+              "& .MuiListItemButton-root": {
+                py: 1.5,
+              },
+              "& .MuiListItemText-root": {
+                my: 0,
+              },
+            }}
+          >
             {themes.map((theme) => {
               const colors = getThemeColors(theme.id);
               if (!colors) return null;
@@ -272,7 +294,12 @@ export default function ThemeSettings({
           <Typography variant="subtitle1" gutterBottom>
             Kies een lettertype stijl:
           </Typography>
-          <List>
+          <List
+            sx={{
+              maxHeight: "calc(70vh - 200px)",
+              overflow: "auto",
+            }}
+          >
             {fontThemes.map((font) => (
               <ListItem key={font.id} disablePadding>
                 <ListItemButton
