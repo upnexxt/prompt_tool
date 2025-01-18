@@ -1,10 +1,32 @@
 import { useState, useEffect } from "react";
 import { ThemeProvider, CssBaseline } from "@mui/material";
 import BlockGrid from "./components/BlockGrid";
-import { lightTheme, darkTheme } from "./theme";
+import ThemeSettings from "./components/ThemeSettings";
+import {
+  lightTheme,
+  natureLightTheme,
+  sunsetLightTheme,
+  oceanLightTheme,
+  lavenderLightTheme,
+  forestLightTheme,
+  autumnLightTheme,
+  cherryLightTheme,
+  slateLightTheme,
+  defaultDarkTheme,
+  natureDarkTheme,
+  sunsetDarkTheme,
+  oceanDarkTheme,
+  lavenderDarkTheme,
+  forestDarkTheme,
+  autumnDarkTheme,
+  cherryDarkTheme,
+  slateDarkTheme,
+  midnightDarkTheme,
+  upnexxtLightTheme,
+  upnexxtDarkTheme,
+} from "./theme";
 
 function App() {
-  // Laad de thema voorkeur uit localStorage of gebruik systeem voorkeur
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem("darkMode");
     if (saved !== null) {
@@ -13,12 +35,21 @@ function App() {
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
-  // Update localStorage wanneer thema verandert
+  const [currentTheme, setCurrentTheme] = useState(() => {
+    const saved = localStorage.getItem("theme");
+    return saved || "default";
+  });
+
+  const [isThemeSettingsOpen, setIsThemeSettingsOpen] = useState(false);
+
   useEffect(() => {
     localStorage.setItem("darkMode", JSON.stringify(isDarkMode));
   }, [isDarkMode]);
 
-  // Luister naar systeem thema veranderingen
+  useEffect(() => {
+    localStorage.setItem("theme", currentTheme);
+  }, [currentTheme]);
+
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = (e: MediaQueryListEvent) => {
@@ -36,10 +67,78 @@ function App() {
     setIsDarkMode((prev: boolean) => !prev);
   };
 
+  const handleThemeChange = (theme: string) => {
+    setCurrentTheme(theme);
+  };
+
+  const getTheme = () => {
+    if (isDarkMode) {
+      switch (currentTheme) {
+        case "upnexxt":
+          return upnexxtDarkTheme;
+        case "nature":
+          return natureDarkTheme;
+        case "sunset":
+          return sunsetDarkTheme;
+        case "ocean":
+          return oceanDarkTheme;
+        case "lavender":
+          return lavenderDarkTheme;
+        case "forest":
+          return forestDarkTheme;
+        case "autumn":
+          return autumnDarkTheme;
+        case "cherry":
+          return cherryDarkTheme;
+        case "slate":
+          return slateDarkTheme;
+        case "midnight":
+          return midnightDarkTheme;
+        default:
+          return defaultDarkTheme;
+      }
+    } else {
+      switch (currentTheme) {
+        case "upnexxt":
+          return upnexxtLightTheme;
+        case "nature":
+          return natureLightTheme;
+        case "sunset":
+          return sunsetLightTheme;
+        case "ocean":
+          return oceanLightTheme;
+        case "lavender":
+          return lavenderLightTheme;
+        case "forest":
+          return forestLightTheme;
+        case "autumn":
+          return autumnLightTheme;
+        case "cherry":
+          return cherryLightTheme;
+        case "slate":
+          return slateLightTheme;
+        default:
+          return lightTheme;
+      }
+    }
+  };
+
   return (
-    <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
+    <ThemeProvider theme={getTheme()}>
       <CssBaseline />
-      <BlockGrid isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />
+      <BlockGrid
+        isDarkMode={isDarkMode}
+        onThemeToggle={handleThemeToggle}
+        onThemeSettingsClick={() => setIsThemeSettingsOpen(true)}
+      />
+      <ThemeSettings
+        open={isThemeSettingsOpen}
+        onClose={() => setIsThemeSettingsOpen(false)}
+        currentTheme={currentTheme}
+        isDarkMode={isDarkMode}
+        onThemeChange={handleThemeChange}
+        onDarkModeToggle={handleThemeToggle}
+      />
     </ThemeProvider>
   );
 }

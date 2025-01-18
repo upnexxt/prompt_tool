@@ -45,3 +45,24 @@
 [2m22:40:31[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/BlockGrid.tsx[22m
 [2m22:40:46[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
 [2m22:40:57[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2m22:45:30[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2m22:46:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2m22:46:34[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/BlockGrid.tsx[22m
+[2m22:46:49[22m [36m[1m[vite][22m[39m [32m✨ new dependencies optimized: [33m@mui/icons-material/Palette, @mui/icons-material/AutoAwesome, @mui/icons-material/Nature[32m[39m
+[2m22:46:49[22m [36m[1m[vite][22m[39m [32m✨ optimized dependencies changed. reloading[39m
+[2m22:49:49[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2m22:50:12[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2m22:50:39[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ThemeSettings.tsx[22m
+[2m22:51:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2m22:51:04[22m [36m[1m[vite][22m[39m [32m✨ new dependencies optimized: [33m@mui/icons-material/Water, @mui/icons-material/Forest, @mui/icons-material/WbTwilight, @mui/icons-material/Favorite, @mui/icons-material/InvertColors[32m[39m
+[2m22:51:04[22m [36m[1m[vite][22m[39m [32m✨ optimized dependencies changed. reloading[39m
+[2m22:52:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/ThemeSettings.tsx[22m
+[2m22:53:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ThemeSettings.tsx[22m
+[2m22:53:41[22m [36m[1m[vite][22m[39m [32m✨ new dependencies optimized: [33m@mui/icons-material/DarkMode[32m[39m
+[2m22:53:41[22m [36m[1m[vite][22m[39m [32m✨ optimized dependencies changed. reloading[39m
+[2m22:53:48[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2m22:58:02[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/components/ThemeSettings.tsx[22m
+[2m22:58:47[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/ThemeSettings.tsx[22m
+[2m22:59:05[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.tsx[22m
+[2m22:59:11[22m [36m[1m[vite][22m[39m [32m✨ new dependencies optimized: [33m@mui/icons-material/Business, @mui/icons-material/TextFields[32m[39m
+[2m22:59:11[22m [36m[1m[vite][22m[39m [32m✨ optimized dependencies changed. reloading[39m

@@ -30,6 +30,7 @@ import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import ClearIcon from "@mui/icons-material/Clear";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
+import PaletteIcon from "@mui/icons-material/Palette";
 
 interface Block {
   id: string;
@@ -47,11 +48,13 @@ interface Category {
 interface BlockGridProps {
   isDarkMode?: boolean;
   onThemeToggle?: () => void;
+  onThemeSettingsClick?: () => void;
 }
 
 export default function BlockGrid({
   isDarkMode,
   onThemeToggle,
+  onThemeSettingsClick,
 }: BlockGridProps) {
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -357,6 +360,11 @@ export default function BlockGrid({
                   ) : (
                     <Brightness4Icon fontSize="small" />
                   )}
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Thema instellingen">
+                <IconButton size="small" onClick={onThemeSettingsClick}>
+                  <PaletteIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             </Box>
