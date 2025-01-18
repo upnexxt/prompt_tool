@@ -48,38 +48,90 @@ export default function BlockGrid() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
+
+  // Laad de opgeslagen states uit localStorage of gebruik defaults
   const [expandedCategories, setExpandedCategories] = useState<
     Record<string, boolean>
-  >({});
+  >(() => {
+    const saved = localStorage.getItem("expandedCategories");
+    return saved ? JSON.parse(saved) : {};
+  });
+
   const [categoryPreviews, setCategoryPreviews] = useState<
     Record<string, boolean>
-  >({});
+  >(() => {
+    const saved = localStorage.getItem("categoryPreviews");
+    return saved ? JSON.parse(saved) : {};
+  });
 
-  // Bij eerste render, alle categorieën uitklappen
+  // Bij eerste render, initialiseer states als ze nog niet bestaan
   useEffect(() => {
-    const initialExpanded: Record<string, boolean> = {};
+    const initialExpanded: Record<string, boolean> = { ...expandedCategories };
+    const initialPreviews: Record<string, boolean> = { ...categoryPreviews };
+    let hasChanges = false;
+
     categories.forEach((category) => {
-      initialExpanded[category.name] = true;
+      if (initialExpanded[category.name] === undefined) {
+        initialExpanded[category.name] = true;
+        hasChanges = true;
+      }
+      if (initialPreviews[category.name] === undefined) {
+        initialPreviews[category.name] = true;
+        hasChanges = true;
+      }
     });
-    initialExpanded["Geen Categorie"] = true;
-    setExpandedCategories(initialExpanded);
+
+    // Voeg "Geen Categorie" toe als die nog niet bestaat
+    if (initialExpanded["Geen Categorie"] === undefined) {
+      initialExpanded["Geen Categorie"] = true;
+      hasChanges = true;
+    }
+    if (initialPreviews["Geen Categorie"] === undefined) {
+      initialPreviews["Geen Categorie"] = true;
+      hasChanges = true;
+    }
+
+    if (hasChanges) {
+      setExpandedCategories(initialExpanded);
+      setCategoryPreviews(initialPreviews);
+    }
   }, [categories.length]);
 
-  // Bij eerste render, alle previews aanzetten
+  // Update localStorage wanneer states veranderen
   useEffect(() => {
-    const initialPreviews: Record<string, boolean> = {};
-    categories.forEach((category) => {
-      initialPreviews[category.name] = true;
-    });
-    initialPreviews["Geen Categorie"] = true;
-    setCategoryPreviews(initialPreviews);
-  }, [categories.length]);
+    localStorage.setItem(
+      "expandedCategories",
+      JSON.stringify(expandedCategories)
+    );
+  }, [expandedCategories]);
 
-  // Bij eerste render, alle categorieën selecteren
+  useEffect(() => {
+    localStorage.setItem("categoryPreviews", JSON.stringify(categoryPreviews));
+  }, [categoryPreviews]);
+
+  // Ook de geselecteerde categorieën opslaan
   useEffect(() => {
     const allCategoryIds = categories.map((cat) => cat.id);
-    setSelectedCategories(allCategoryIds);
+    const savedSelected = localStorage.getItem("selectedCategories");
+    if (savedSelected) {
+      // Filter out any saved categories that no longer exist
+      const validSelected = JSON.parse(savedSelected).filter((id: string) =>
+        allCategoryIds.includes(id)
+      );
+      setSelectedCategories(
+        validSelected.length ? validSelected : allCategoryIds
+      );
+    } else {
+      setSelectedCategories(allCategoryIds);
+    }
   }, [categories]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      "selectedCategories",
+      JSON.stringify(selectedCategories)
+    );
+  }, [selectedCategories]);
 
   const toggleCategory = (categoryName: string) => {
     setExpandedCategories((prev) => ({
