@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -184,10 +184,36 @@ export default function BlockCard({
     setLocalShowPreview(!localShowPreview);
   };
 
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === "Escape" && localShowPreview) {
+        setLocalShowPreview(false);
+      }
+    },
+    [localShowPreview]
+  );
+
+  const handleMouseEnter = useCallback(() => {
+    window.addEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  const handleMouseLeave = useCallback(() => {
+    window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  // Cleanup effect om event listeners te verwijderen
+  useEffect(() => {
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleKeyDown]);
+
   return (
     <>
       <Card
         onClick={handleCardClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         sx={{
           height: localShowPreview ? CARD_MIN_HEIGHT : "auto",
           display: "flex",
