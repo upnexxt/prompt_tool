@@ -1,58 +1,45 @@
-import React, { useState, useEffect } from "react";
-import {
-  ThemeProvider,
-  CssBaseline,
-  IconButton,
-  Box,
-  useMediaQuery,
-} from "@mui/material";
-import Brightness4Icon from "@mui/icons-material/Brightness4";
-import Brightness7Icon from "@mui/icons-material/Brightness7";
+import { useState, useEffect } from "react";
+import { ThemeProvider, CssBaseline } from "@mui/material";
 import BlockGrid from "./components/BlockGrid";
-import { getTheme } from "./theme";
+import { lightTheme, darkTheme } from "./theme";
 
 function App() {
-  // Check systeem voorkeur voor donker thema
-  const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
-
-  // Haal opgeslagen thema voorkeur op uit localStorage
-  const [mode, setMode] = useState<"light" | "dark">(() => {
-    const savedMode = localStorage.getItem("themeMode");
-    return (
-      (savedMode as "light" | "dark") || (prefersDarkMode ? "dark" : "light")
-    );
+  // Laad de thema voorkeur uit localStorage of gebruik systeem voorkeur
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem("darkMode");
+    if (saved !== null) {
+      return JSON.parse(saved);
+    }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
   // Update localStorage wanneer thema verandert
   useEffect(() => {
-    localStorage.setItem("themeMode", mode);
-  }, [mode]);
+    localStorage.setItem("darkMode", JSON.stringify(isDarkMode));
+  }, [isDarkMode]);
 
-  const theme = getTheme(mode);
+  // Luister naar systeem thema veranderingen
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (e: MediaQueryListEvent) => {
+      const saved = localStorage.getItem("darkMode");
+      if (saved === null) {
+        setIsDarkMode(e.matches);
+      }
+    };
 
-  const toggleTheme = () => {
-    setMode((prevMode) => (prevMode === "light" ? "dark" : "light"));
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  const handleThemeToggle = () => {
+    setIsDarkMode((prev: boolean) => !prev);
   };
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
       <CssBaseline />
-      <Box
-        sx={{
-          position: "fixed",
-          top: 16,
-          right: 16,
-          zIndex: 1100,
-          bgcolor: "background.paper",
-          borderRadius: "50%",
-          boxShadow: 2,
-        }}
-      >
-        <IconButton onClick={toggleTheme} color="inherit" size="large">
-          {mode === "dark" ? <Brightness7Icon /> : <Brightness4Icon />}
-        </IconButton>
-      </Box>
-      <BlockGrid />
+      <BlockGrid isDarkMode={isDarkMode} onThemeToggle={handleThemeToggle} />
     </ThemeProvider>
   );
 }

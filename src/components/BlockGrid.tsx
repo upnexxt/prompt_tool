@@ -28,6 +28,8 @@ import { supabase } from "../config/supabase";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import ClearIcon from "@mui/icons-material/Clear";
+import Brightness4Icon from "@mui/icons-material/Brightness4";
+import Brightness7Icon from "@mui/icons-material/Brightness7";
 
 interface Block {
   id: string;
@@ -42,7 +44,15 @@ interface Category {
   color?: string;
 }
 
-export default function BlockGrid() {
+interface BlockGridProps {
+  isDarkMode?: boolean;
+  onThemeToggle?: () => void;
+}
+
+export default function BlockGrid({
+  isDarkMode,
+  onThemeToggle,
+}: BlockGridProps) {
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -337,6 +347,15 @@ export default function BlockGrid() {
                     <VisibilityOffIcon fontSize="small" />
                   ) : (
                     <VisibilityIcon fontSize="small" />
+                  )}
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={isDarkMode ? "Licht thema" : "Donker thema"}>
+                <IconButton size="small" onClick={onThemeToggle}>
+                  {isDarkMode ? (
+                    <Brightness7Icon fontSize="small" />
+                  ) : (
+                    <Brightness4Icon fontSize="small" />
                   )}
                 </IconButton>
               </Tooltip>
