@@ -240,22 +240,20 @@ export default function CategoryManager({
                           ))}
                         </Select>
                       </FormControl>
-                      <Box sx={{ display: "flex", gap: 0.5, ml: 1 }}>
-                        <Tooltip title="Opslaan">
-                          <IconButton
-                            onClick={() => handleSaveEdit(category.id)}
-                            color="primary"
-                            size="small"
-                          >
-                            <CheckIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Annuleren">
-                          <IconButton onClick={handleCancelEdit} size="small">
-                            <CloseIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
+                      <Tooltip title="Opslaan">
+                        <IconButton
+                          onClick={() => handleSaveEdit(category.id)}
+                          color="primary"
+                          size="small"
+                        >
+                          <CheckIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Annuleren">
+                        <IconButton onClick={handleCancelEdit} size="small">
+                          <CloseIcon />
+                        </IconButton>
+                      </Tooltip>
                     </>
                   ) : (
                     <>
@@ -268,31 +266,29 @@ export default function CategoryManager({
                         }}
                       />
                       <ListItemText primary={category.name} sx={{ flex: 1 }} />
-                      <Box sx={{ display: "flex", gap: 0.5 }}>
-                        <Tooltip title="Bewerken">
-                          <IconButton
-                            onClick={() => handleStartEdit(category)}
-                            size="small"
-                          >
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Verwijderen">
-                          <IconButton
-                            onClick={() => handleDeleteCategory(category.id)}
-                            sx={{
-                              "&:hover": {
-                                "& .MuiSvgIcon-root": {
-                                  color: "error.main",
-                                },
+                      <Tooltip title="Bewerken">
+                        <IconButton
+                          onClick={() => handleStartEdit(category)}
+                          size="small"
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Verwijderen">
+                        <IconButton
+                          onClick={() => handleDeleteCategory(category.id)}
+                          sx={{
+                            "&:hover": {
+                              "& .MuiSvgIcon-root": {
+                                color: "error.main",
                               },
-                            }}
-                            size="small"
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
+                            },
+                          }}
+                          size="small"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
                     </>
                   )}
                 </Box>
