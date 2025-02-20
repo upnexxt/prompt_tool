@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import { ThemeProvider, CssBaseline, Box } from "@mui/material";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import BlockGrid from "./components/BlockGrid";
 import ThemeSettings from "./components/ThemeSettings";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import Login from "./components/auth/Login";
+import SignUp from "./components/auth/SignUp";
+import PendingApproval from "./components/auth/PendingApproval";
 import {
   lightTheme,
   natureLightTheme,
@@ -26,7 +31,23 @@ import {
   upnexxtDarkTheme,
 } from "./theme";
 
-function App() {
+// Protected Route wrapper component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isApproved, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user || !isApproved) {
+    return <Navigate to="/login" />;
+  }
+
+  return <>{children}</>;
+};
+
+// Main App Content component
+const AppContent = () => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem("darkMode");
     if (saved !== null) {
@@ -126,41 +147,65 @@ function App() {
   return (
     <ThemeProvider theme={getTheme()}>
       <CssBaseline />
-      <Box
-        sx={{
-          width: "100%",
-          maxWidth: "400px",
-          margin: "10px auto",
-          padding: "0 20px",
-          display: "flex",
-          justifyContent: "center",
-          opacity: 0.9
-        }}
-      >
-        <img
-          src="/banner.png"
-          alt="UpNexxt Banner"
-          style={{
-            maxWidth: "100%",
-            height: "auto",
-            filter: "brightness(0.95)"
-          }}
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <>
+                <Box
+                  sx={{
+                    width: "100%",
+                    maxWidth: "400px",
+                    margin: "10px auto",
+                    padding: "0 20px",
+                    display: "flex",
+                    justifyContent: "center",
+                    opacity: 0.9
+                  }}
+                >
+                  <img
+                    src="/banner.png"
+                    alt="UpNexxt Banner"
+                    style={{
+                      maxWidth: "100%",
+                      height: "auto",
+                      filter: "brightness(0.95)"
+                    }}
+                  />
+                </Box>
+                <BlockGrid
+                  isDarkMode={isDarkMode}
+                  onThemeToggle={handleThemeToggle}
+                  onThemeSettingsClick={() => setIsThemeSettingsOpen(true)}
+                />
+                <ThemeSettings
+                  open={isThemeSettingsOpen}
+                  onClose={() => setIsThemeSettingsOpen(false)}
+                  currentTheme={currentTheme}
+                  isDarkMode={isDarkMode}
+                  onThemeChange={handleThemeChange}
+                  onDarkModeToggle={handleThemeToggle}
+                />
+              </>
+            </ProtectedRoute>
+          }
         />
-      </Box>
-      <BlockGrid
-        isDarkMode={isDarkMode}
-        onThemeToggle={handleThemeToggle}
-        onThemeSettingsClick={() => setIsThemeSettingsOpen(true)}
-      />
-      <ThemeSettings
-        open={isThemeSettingsOpen}
-        onClose={() => setIsThemeSettingsOpen(false)}
-        currentTheme={currentTheme}
-        isDarkMode={isDarkMode}
-        onThemeChange={handleThemeChange}
-        onDarkModeToggle={handleThemeToggle}
-      />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/pending-approval" element={<PendingApproval />} />
+      </Routes>
     </ThemeProvider>
+  );
+};
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
