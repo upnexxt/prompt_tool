@@ -7,6 +7,7 @@ select set_config('my_app.resend_api_key', 're_9oEydS51_MnHceauD1AyJCC4DdbLsetvv
 drop function if exists approve_user(text);
 drop function if exists handle_new_user_registration() cascade;
 drop function if exists add_approved_column_to_users();
+drop function if exists get_user_approval_status(uuid);
 drop table if exists pending_users;
 
 -- Enable crypto extension
@@ -37,6 +38,15 @@ end;
 $$ language plpgsql;
 
 select add_approved_column_to_users();
+
+-- Create function to get user approval status
+create or replace function get_user_approval_status(user_id uuid)
+returns table (approved boolean) as $$
+begin
+  return query
+  select u.approved from auth.users u where u.id = user_id;
+end;
+$$ language plpgsql security definer;
 
 -- Create function to handle new user registration
 create or replace function handle_new_user_registration()

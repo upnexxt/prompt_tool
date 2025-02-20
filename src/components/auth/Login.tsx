@@ -54,22 +54,9 @@ const Login = () => {
         throw new Error('No user data returned');
       }
 
-      // Check if user is approved using auth.users
-      const { data: { user: authUser }, error: userError } = await supabase.auth.admin.getUserById(data.user.id);
-
-      if (userError) throw userError;
-
-      if (!authUser?.user_metadata?.approved) {
-        // Sign out if not approved
-        await supabase.auth.signOut();
-        setError({
-          message: 'Your account has not been approved yet. Please wait for admin confirmation.',
-        });
-        return;
-      }
-
-      // Successfully logged in and approved
-      navigate('/dashboard'); // Redirect to dashboard or home page
+      // No need to check approval status here since AuthContext will handle it
+      // Navigate immediately after successful login
+      navigate('/', { replace: true });
 
     } catch (err: any) {
       setError({
@@ -82,7 +69,7 @@ const Login = () => {
 
   // If user is already logged in, redirect to dashboard
   if (user) {
-    navigate('/dashboard');
+    navigate('/', { replace: true });
     return null;
   }
 

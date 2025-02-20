@@ -58,11 +58,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const checkApprovalStatus = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('approved')
-        .eq('id', userId)
-        .single();
+      // Using RPC call to get approved status from auth.users
+      const { data: { approved }, error } = await supabase.rpc('get_user_approval_status', {
+        user_id: userId
+      });
 
       if (error) {
         console.error('Error checking approval status:', error);
@@ -70,7 +69,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      setIsApproved(data?.approved ?? false);
+      setIsApproved(approved ?? false);
     } catch (error) {
       console.error('Error:', error);
       setIsApproved(false);
