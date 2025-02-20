@@ -129,11 +129,12 @@ function App() {
       <Box
         sx={{
           width: "100%",
-          maxWidth: "800px",
-          margin: "20px auto",
+          maxWidth: "400px",
+          margin: "10px auto",
           padding: "0 20px",
           display: "flex",
-          justifyContent: "center"
+          justifyContent: "center",
+          opacity: 0.9
         }}
       >
         <img
@@ -141,7 +142,8 @@ function App() {
           alt="UpNexxt Banner"
           style={{
             maxWidth: "100%",
-            height: "auto"
+            height: "auto",
+            filter: "brightness(0.95)"
           }}
         />
       </Box>
