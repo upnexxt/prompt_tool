@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ThemeProvider, CssBaseline } from "@mui/material";
+import { ThemeProvider, CssBaseline, Box } from "@mui/material";
 import BlockGrid from "./components/BlockGrid";
 import ThemeSettings from "./components/ThemeSettings";
 import {
@@ -126,6 +126,25 @@ function App() {
   return (
     <ThemeProvider theme={getTheme()}>
       <CssBaseline />
+      <Box
+        sx={{
+          width: "100%",
+          maxWidth: "800px",
+          margin: "20px auto",
+          padding: "0 20px",
+          display: "flex",
+          justifyContent: "center"
+        }}
+      >
+        <img
+          src="/banner.png"
+          alt="UpNexxt Banner"
+          style={{
+            maxWidth: "100%",
+            height: "auto"
+          }}
+        />
+      </Box>
       <BlockGrid
         isDarkMode={isDarkMode}
         onThemeToggle={handleThemeToggle}
