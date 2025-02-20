@@ -54,16 +54,12 @@ const Login = () => {
         throw new Error('No user data returned');
       }
 
-      // Check if user is approved
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('approved')
-        .eq('id', data.user.id)
-        .single();
+      // Check if user is approved using auth.users
+      const { data: { user: authUser }, error: userError } = await supabase.auth.admin.getUserById(data.user.id);
 
       if (userError) throw userError;
 
-      if (!userData?.approved) {
+      if (!authUser?.user_metadata?.approved) {
         // Sign out if not approved
         await supabase.auth.signOut();
         setError({

@@ -1,3 +1,14 @@
+-- Set up custom configuration parameters
+-- Note: Replace 'your_jwt_secret' and 'your_resend_api_key' with actual values
+select set_config('my_app.jwt_secret', 'I9qE4qDRpWhkCuGiwVwVzhwe9OGmSjd3AdHzFFCdtF8=', false);
+select set_config('my_app.resend_api_key', 're_9oEydS51_MnHceauD1AyJCC4DdbLsetvv', false);
+
+-- Drop existing objects first
+drop function if exists approve_user(text);
+drop function if exists handle_new_user_registration() cascade;
+drop function if exists add_approved_column_to_users();
+drop table if exists pending_users;
+
 -- Enable crypto extension
 create extension if not exists "pgcrypto";
 
@@ -34,19 +45,19 @@ declare
   admin_email text := 'vanleeuwen.daniel@upnexxt.nl';
   approval_url text;
 begin
-  -- Generate approval URL (replace with your actual frontend URL)
-  approval_url := 'https://your-app-url.com/approve?token=' || 
-                  encode(encrypt(new.id::text::bytea, current_setting('app.jwt_secret')::bytea, 'aes-cbc/pad:pkcs')::bytea, 'base64');
+  -- Generate approval URL with your actual frontend URL
+  approval_url := 'https://upnexxt.nl/approve?token=' || 
+                  encode(encrypt(new.id::text::bytea, current_setting('my_app.jwt_secret')::bytea, 'aes-cbc/pad:pkcs')::bytea, 'base64');
 
-  -- Insert notification for admin (you'll need to set up your email service in Supabase)
+  -- Insert notification for admin
   perform net.http_post(
     url := 'https://api.resend.com/emails',
     headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || current_setting('app.resend_api_key'),
+      'Authorization', 'Bearer ' || current_setting('my_app.resend_api_key'),
       'Content-Type', 'application/json'
     ),
     body := jsonb_build_object(
-      'from', 'noreply@your-domain.com',
+      'from', 'noreply@upnexxt.nl',
       'to', admin_email,
       'subject', 'New User Registration Request',
       'html', format(
@@ -124,11 +135,11 @@ begin
   perform net.http_post(
     url := 'https://api.resend.com/emails',
     headers := jsonb_build_object(
-      'Authorization', 'Bearer ' || current_setting('app.resend_api_key'),
+      'Authorization', 'Bearer ' || current_setting('my_app.resend_api_key'),
       'Content-Type', 'application/json'
     ),
     body := jsonb_build_object(
-      'from', 'noreply@your-domain.com',
+      'from', 'noreply@upnexxt.nl',
       'to', user_email,
       'subject', 'Account Approved',
       'html', 'Your account has been approved. You can now log in to the application.'
