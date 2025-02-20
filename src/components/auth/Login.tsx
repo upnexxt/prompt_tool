@@ -1,121 +1,94 @@
 import { useState } from 'react';
-import { supabase } from '../../config/supabase';
-import { LoginData, AuthError } from '../../types/auth';
-import AuthLayout from './AuthLayout';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import {
+  Container,
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+} from '@mui/material';
 
-const Login = () => {
-  const [formData, setFormData] = useState<LoginData>({
-    email: '',
-    password: '',
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<AuthError | null>(null);
+export default function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const { signIn, loading } = useAuth();
   const navigate = useNavigate();
-  const { user } = useAuth();
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
 
-    try {
-      // Check if user is pending approval
-      const { data: pendingUser } = await supabase
-        .from('pending_users')
-        .select('*')
-        .eq('email', formData.email)
-        .single();
-
-      if (pendingUser) {
-        setError({
-          message: 'Your account is still pending approval. Please wait for admin confirmation.',
-        });
-        return;
-      }
-
-      // Attempt to sign in
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (signInError) throw signInError;
-
-      if (!data.user) {
-        throw new Error('No user data returned');
-      }
-
-      // No need to check approval status here since AuthContext will handle it
-      // Navigate immediately after successful login
-      navigate('/', { replace: true });
-
-    } catch (err: any) {
-      setError({
-        message: err.message || 'Invalid email or password.',
-      });
-    } finally {
-      setLoading(false);
+    const { error } = await signIn(email, password);
+    
+    if (error) {
+      setError(error);
+    } else {
+      navigate('/');
     }
   };
 
-  // If user is already logged in, redirect to dashboard
-  if (user) {
-    navigate('/', { replace: true });
-    return null;
-  }
-
   return (
-    <AuthLayout title="Login">
-      <form onSubmit={handleLogin} className="auth-form">
-        <div className="form-group">
-          <label htmlFor="email">Email</label>
-          <input
+    <Container component="main" maxWidth="xs">
+      <Box
+        sx={{
+          marginTop: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
+        <Typography component="h1" variant="h5">
+          Sign in
+        </Typography>
+        <Box
+          component="form"
+          onSubmit={handleLogin}
+          noValidate
+          sx={{ mt: 1, width: '100%' }}
+        >
+          <TextField
+            margin="normal"
+            required
+            fullWidth
             id="email"
+            label="Email Address"
             name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
+            autoComplete="email"
+            autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
-        </div>
-        <div className="form-group">
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
+          <TextField
+            margin="normal"
+            required
+            fullWidth
             name="password"
+            label="Password"
             type="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
+            id="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
-        </div>
-        <button type="submit" disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
-        </button>
-        
-        {error && <p className="error">{error.message}</p>}
-        
-        <div className="auth-switch">
-          Don't have an account?{' '}
-          <a href="/signup" onClick={(e) => {
-            e.preventDefault();
-            navigate('/signup');
-          }}>
-            Sign up
-          </a>
-        </div>
-      </form>
-    </AuthLayout>
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3, mb: 2 }}
+            disabled={loading}
+          >
+            {loading ? 'Signing in...' : 'Sign In'}
+          </Button>
+        </Box>
+      </Box>
+    </Container>
   );
-};
-
-export default Login;
+}

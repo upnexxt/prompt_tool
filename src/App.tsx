@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
-import { ThemeProvider, CssBaseline, Box, CircularProgress } from "@mui/material";
+import { ThemeProvider, CssBaseline, Box, Container, Theme } from "@mui/material";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import BlockGrid from "./components/BlockGrid";
 import ThemeSettings from "./components/ThemeSettings";
-import { AuthProvider, useAuth } from "./context/AuthContext";
 import Login from "./components/auth/Login";
-import SignUp from "./components/auth/SignUp";
-import PendingApproval from "./components/auth/PendingApproval";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import { AuthProvider } from "./context/AuthContext";
 import {
   lightTheme,
   natureLightTheme,
@@ -31,47 +30,17 @@ import {
   upnexxtDarkTheme,
 } from "./theme";
 
-// Protected Route wrapper component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isApproved, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!isApproved) {
-    return <Navigate to="/pending-approval" replace />;
-  }
-
-  return <>{children}</>;
-};
-
-// Main App Content component
-const AppContent = () => {
+function App() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    const saved = localStorage.getItem("darkMode");
-    if (saved !== null) {
-      return JSON.parse(saved);
+    const darkModeSetting = localStorage.getItem("darkMode");
+    if (darkModeSetting !== null) {
+      return JSON.parse(darkModeSetting);
     }
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
 
   const [currentTheme, setCurrentTheme] = useState(() => {
-    const saved = localStorage.getItem("theme");
-    return saved || "default";
+    return localStorage.getItem("theme") || "default";
   });
 
   const [isThemeSettingsOpen, setIsThemeSettingsOpen] = useState(false);
@@ -87,8 +56,8 @@ const AppContent = () => {
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = (e: MediaQueryListEvent) => {
-      const saved = localStorage.getItem("darkMode");
-      if (saved === null) {
+      const darkModeSetting = localStorage.getItem("darkMode");
+      if (darkModeSetting === null) {
         setIsDarkMode(e.matches);
       }
     };
@@ -105,7 +74,7 @@ const AppContent = () => {
     setCurrentTheme(theme);
   };
 
-  const getTheme = () => {
+  const getTheme = (): Theme => {
     if (isDarkMode) {
       switch (currentTheme) {
         case "upnexxt":
@@ -157,68 +126,65 @@ const AppContent = () => {
     }
   };
 
-  return (
-    <ThemeProvider theme={getTheme()}>
-      <CssBaseline />
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <>
-                <Box
-                  sx={{
-                    width: "100%",
-                    maxWidth: "400px",
-                    margin: "10px auto",
-                    padding: "0 20px",
-                    display: "flex",
-                    justifyContent: "center",
-                    opacity: 0.9
-                  }}
-                >
-                  <img
-                    src="/banner.png"
-                    alt="UpNexxt Banner"
-                    style={{
-                      maxWidth: "100%",
-                      height: "auto",
-                      filter: "brightness(0.95)"
-                    }}
-                  />
-                </Box>
-                <BlockGrid
-                  isDarkMode={isDarkMode}
-                  onThemeToggle={handleThemeToggle}
-                  onThemeSettingsClick={() => setIsThemeSettingsOpen(true)}
-                />
-                <ThemeSettings
-                  open={isThemeSettingsOpen}
-                  onClose={() => setIsThemeSettingsOpen(false)}
-                  currentTheme={currentTheme}
-                  isDarkMode={isDarkMode}
-                  onThemeChange={handleThemeChange}
-                  onDarkModeToggle={handleThemeToggle}
-                />
-              </>
-            </ProtectedRoute>
-          }
+  const MainContent = () => (
+    <Container maxWidth="lg">
+      <Box
+        sx={{
+          width: "100%",
+          maxWidth: "400px",
+          margin: "10px auto",
+          padding: "0 20px",
+          display: "flex",
+          justifyContent: "center",
+          opacity: 0.9
+        }}
+      >
+        <img
+          src="/banner.png"
+          alt="UpNexxt Banner"
+          style={{
+            maxWidth: "100%",
+            height: "auto",
+            filter: "brightness(0.95)"
+          }}
         />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/pending-approval" element={<PendingApproval />} />
-      </Routes>
-    </ThemeProvider>
+      </Box>
+      <BlockGrid
+        isDarkMode={isDarkMode}
+        onThemeToggle={handleThemeToggle}
+        onThemeSettingsClick={() => setIsThemeSettingsOpen(true)}
+      />
+      <ThemeSettings
+        open={isThemeSettingsOpen}
+        onClose={() => setIsThemeSettingsOpen(false)}
+        currentTheme={currentTheme}
+        isDarkMode={isDarkMode}
+        onThemeChange={handleThemeChange}
+        onDarkModeToggle={handleThemeToggle}
+      />
+    </Container>
   );
-};
 
-function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </BrowserRouter>
+    <AuthProvider>
+      <ThemeProvider theme={getTheme()}>
+        <CssBaseline />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <MainContent />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 
