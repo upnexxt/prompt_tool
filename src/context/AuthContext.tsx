@@ -35,6 +35,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         checkApprovalStatus(session.user.id);
+      } else {
+        setLoading(false);
       }
     });
 
@@ -47,8 +49,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await checkApprovalStatus(session.user.id);
       } else {
         setIsApproved(false);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {
@@ -58,21 +60,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const checkApprovalStatus = async (userId: string) => {
     try {
-      // Using RPC call to get approved status from auth.users
-      const { data: { approved }, error } = await supabase.rpc('get_user_approval_status', {
-        user_id: userId
-      });
+      const { data, error } = await supabase.rpc(
+        'get_user_approval_status',
+        { user_id: userId }
+      );
 
       if (error) {
         console.error('Error checking approval status:', error);
         setIsApproved(false);
-        return;
+      } else {
+        setIsApproved(data);
       }
-
-      setIsApproved(approved ?? false);
     } catch (error) {
       console.error('Error:', error);
       setIsApproved(false);
+    } finally {
+      setLoading(false);
     }
   };
 

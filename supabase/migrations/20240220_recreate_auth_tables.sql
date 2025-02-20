@@ -40,13 +40,21 @@ $$ language plpgsql;
 select add_approved_column_to_users();
 
 -- Create function to get user approval status
-create or replace function get_user_approval_status(user_id uuid)
-returns table (approved boolean) as $$
+create or replace function public.get_user_approval_status(user_id uuid)
+returns boolean as $$
+declare
+  result boolean;
 begin
-  return query
-  select u.approved from auth.users u where u.id = user_id;
+  select approved into result
+  from auth.users
+  where id = user_id;
+  
+  return coalesce(result, false);
 end;
 $$ language plpgsql security definer;
+
+-- Grant execute permission to public
+grant execute on function public.get_user_approval_status(uuid) to public;
 
 -- Create function to handle new user registration
 create or replace function handle_new_user_registration()
